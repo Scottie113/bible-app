@@ -108,7 +108,7 @@ export default function OriginalScreen() {
                 const text = state?.error ? `Couldn’t load: ${state.error.message}` : state?.verses?.[verse - 1]?.text;
                 const t = getTranslation(id);
                 return (
-                  <ThemedText key={id} style={styles.translation} lang={t.language}>
+                  <ThemedText key={id} style={styles.translation} accessibilityLanguage={t.language}>
                     <ThemedText type="smallBold" themeColor="textSecondary">
                       {t.abbreviation}
                       {'  '}
