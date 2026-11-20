@@ -3,14 +3,17 @@ import { useColorScheme } from 'react-native';
 
 import { ReadingLocationProvider } from '@/bible/reading-location';
 import AppTabs from '@/components/app-tabs';
+import { AccountProvider } from '@/sync/account';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <ReadingLocationProvider>
-        <AppTabs />
-      </ReadingLocationProvider>
+      <AccountProvider>
+        <ReadingLocationProvider>
+          <AppTabs />
+        </ReadingLocationProvider>
+      </AccountProvider>
     </ThemeProvider>
   );
 }

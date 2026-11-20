@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { getBook } from '@/bible/books';
 import { useReadingLocation } from '@/bible/reading-location';
-import { parseRef, type VerseRef } from '@/bible/verse-id';
+import { parseRef } from '@/bible/verse-id';
 import { BookPicker } from '@/components/book-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -14,8 +14,8 @@ import { useTheme } from '@/hooks/use-theme';
  * Top bar shared by Read and Compare: previous / "John 3 ▾" / next, plus a
  * box where you can type a reference like "Rom 8:28" or "Psalm 23".
  */
-export function ChapterHeader({ onJumpToVerse }: { onJumpToVerse?: (ref: VerseRef) => void }) {
-  const { book, chapter, goTo, next, previous } = useReadingLocation();
+export function ChapterHeader() {
+  const { book, chapter, goTo, show, next, previous } = useReadingLocation();
   const [picking, setPicking] = useState(false);
   const [query, setQuery] = useState('');
   const [invalid, setInvalid] = useState(false);
@@ -27,9 +27,7 @@ export function ChapterHeader({ onJumpToVerse }: { onJumpToVerse?: (ref: VerseRe
       setInvalid(true);
       return;
     }
-    // Tell the screen first, so it knows a verse jump is coming before the chapter changes.
-    if (ref.verse) onJumpToVerse?.(ref);
-    goTo(ref.book, ref.chapter);
+    show(ref);
     setQuery('');
     setInvalid(false);
   };

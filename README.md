@@ -16,21 +16,58 @@ A cross-platform Bible study app (web, iPhone/iPad, Android) built with Expo + R
 
   Greek words found only in the Textus Receptus (the text behind the KJV) are shown dashed, which
   explains many KJV differences (e.g. "his only begotten Son" in John 3:16).
+- **Accounts (email + password), notes and highlights, synced across devices:**
+  - **Notes tab:** write notes; any reference you type (`John 3:16`, `Rom 8:28-30`, `Ps 23`) becomes a
+    link. Read view shows links; tapping one opens the Bible at that verse. Search your notes.
+  - **In the Read tab:** tap a verse to highlight it (5 colors) or **Add to note** (adds the reference
+    and the verse text). Verses your notes mention show 📝 — tap it to open the note.
+  - Your reading place (book, chapter, translations) follows you between devices.
+  - Works offline: changes are saved on the device and sent when back online; the newest edit wins.
 
 ## Run it
 
 ```bash
 npm install
+npm run db:start          # local backend in Docker (first run downloads images; needs Docker Desktop)
+cp .env.example .env.local   # then fill in from `npx supabase status` (API URL + Publishable key)
 npx expo start --web      # browser
 npx expo start            # scan the QR code with Expo Go on a phone
 ```
 
+The app runs without the backend too; only accounts/notes are turned off.
+Local backend extras: Studio (database browser) at http://127.0.0.1:54323, test emails at http://127.0.0.1:54324.
+`npm run db:reset` wipes local data and re-applies `supabase/migrations`.
+
 Before committing: `npm run typecheck` and `npx eslint .`
+
+### Moving the backend to the cloud (needed for real phones / other people)
+
+The local backend only works on this computer. To sync between your real devices:
+
+1. Create a free project at supabase.com (you do this; it needs your account).
+2. `npx supabase login`, then `npx supabase link --project-ref <your-project-ref>` and `npx supabase db push`
+   (applies `supabase/migrations`).
+3. In the dashboard: Authentication > URL Configuration — set the site URL to where the web app is hosted.
+   Email confirmation is on by default in the cloud (sign-up shows "check your email").
+4. Put the project's URL and publishable key in `.env.local` (or EAS environment variables for app builds).
+
+## How sync works
+
+- Tables: `notes`, `highlights`, `reading_state` (see `supabase/migrations`). Row-level security: each
+  person can only read and write their own rows.
+- Each device keeps a full copy of the person's notes/highlights (`src/sync/user-store.ts`), saved locally,
+  so everything opens instantly and works offline.
+- Changes go into an "outbox" and are upserted to the server; other devices get them live (Supabase Realtime)
+  and on every reconnect (rows changed since the last pull, by server time `synced_at`).
+- Conflicts: the edit with the newer `updated_at` wins; the server ignores an older edit that arrives late.
+- Deletes are "soft" (`deleted_at`) so other devices learn about them.
 
 ## How it's organized
 
 ```
-src/app/            screens (Expo Router): index.tsx = Read, compare.tsx = Original
+src/app/            screens (Expo Router): index.tsx = Read, compare.tsx = Original, notes/ = Notes
+src/sync/           accounts + sync: supabase.ts (client), account.tsx (sign-in state), user-store.ts (offline store + sync)
+supabase/           backend config and database migrations
 src/bible/          the Bible "engine" — no UI
   books.ts            66 books, names, abbreviations, chapter counts
   verse-id.ts         verse numbers (BBCCCVVV) + reference parser
@@ -38,7 +75,8 @@ src/bible/          the Bible "engine" — no UI
   source.ts           reads modern translation text (getChapter, useChapter)
   original.ts         reads Hebrew/Greek words and lexicon entries
   morphology.ts       grammar codes -> plain English ("V-AAI-3S" -> "Verb · aorist active indicative · 3rd person singular")
-  reading-location.tsx current book/chapter/translations, shared by tabs
+  find-refs.ts        finds Bible references inside free text (notes)
+  reading-location.tsx current book/chapter/translations + "show this verse", shared by tabs, synced
 src/components/     shared UI (chapter header, book picker, interlinear verse, word panel)
 src/data/bibles/    generated: <translation>/<book>.json
 src/data/original/  generated: Hebrew/Greek words per book
@@ -97,7 +135,7 @@ and the revised Chinese Union Version are copyrighted.
 
 1. ✅ Reader
 2. ✅ Original-language view: Hebrew/Greek word by word with modern translations (EN, 中文, FR, ES)
-3. Accounts and sync (Supabase + PowerSync): highlights, notes with verse links, reading place
+3. ✅ Accounts and sync (Supabase): highlights, notes with verse links, reading place, offline
 4. AI study assistant with tradition lenses, able to explain why a word was translated a certain way
    (server-side; provider configurable — OpenAI or Claude)
 5. AI over your notes, polish, app store release

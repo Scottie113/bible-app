@@ -26,6 +26,14 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+/** Verse highlight colors (soft enough to read black/white text on). */
+export const HighlightColors = {
+  light: { yellow: '#FFF1A8', green: '#CDEFC8', blue: '#CFE4FF', pink: '#FFD4E5', purple: '#E4D8FF' },
+  dark: { yellow: '#5C5214', green: '#1F4A22', blue: '#1B3A5E', pink: '#5A2340', purple: '#3B2C66' },
+} as const;
+
+export const Accent = '#3c87f7';
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

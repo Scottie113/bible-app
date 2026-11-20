@@ -1,18 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View, type ScrollViewInstance } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { getBook } from '@/bible/books';
 import { LANGUAGE_LABEL, languageOf, useOriginalChapter, type Word } from '@/bible/original';
 import { useReadingLocation } from '@/bible/reading-location';
 import { useChapters } from '@/bible/source';
 import { getTranslation } from '@/bible/translations';
-import { formatRef, type VerseRef } from '@/bible/verse-id';
+import { formatRef } from '@/bible/verse-id';
 import { ChapterHeader } from '@/components/chapter-header';
 import { InterlinearVerse, type InterlinearOptions } from '@/components/interlinear-verse';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TranslationChips } from '@/components/translation-chips';
+import { useVerseScroll } from '@/components/use-verse-scroll';
 import { WordSheet } from '@/components/word-sheet';
 import { Fonts, Spacing } from '@/constants/theme';
 
@@ -23,39 +24,13 @@ import { Fonts, Spacing } from '@/constants/theme';
  * translated that way.
  */
 export default function OriginalScreen() {
-  const { book, chapter, compare, toggleCompare, goTo } = useReadingLocation();
+  const { book, chapter, compare, toggleCompare, show } = useReadingLocation();
   const language = languageOf(book);
   const original = useOriginalChapter(book, chapter);
   const translations = useChapters(compare, book, chapter);
   const [options, setOptions] = useState<InterlinearOptions>({ showTranslit: true, meaning: 'english' });
   const [picked, setPicked] = useState<{ verse: number; word: Word } | null>(null);
-
-  const scrollRef = useRef<ScrollViewInstance>(null);
-  const listY = useRef(0);
-  const verseY = useRef(new Map<number, number>());
-  const pendingJump = useRef<number | null>(null);
-  const [highlight, setHighlight] = useState<number | null>(null);
-
-  useEffect(() => {
-    verseY.current.clear();
-    if (pendingJump.current == null) {
-      setHighlight(null);
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
-    }
-  }, [book, chapter]);
-
-  const scrollToVerse = (verse: number) => {
-    const y = verseY.current.get(verse);
-    if (y == null) return false;
-    scrollRef.current?.scrollTo({ y: Math.max(listY.current + y - Spacing.five, 0), animated: true });
-    return true;
-  };
-
-  const jumpTo = (ref: VerseRef) => {
-    setHighlight(ref.verse);
-    pendingJump.current = ref.verse;
-    if (ref.book === book && ref.chapter === chapter && scrollToVerse(ref.verse)) pendingJump.current = null;
-  };
+  const { scrollRef, focused: highlight, onListLayout, onVerseLayout } = useVerseScroll();
 
   const onPressWord = useCallback((verse: number, word: Word) => setPicked({ verse, word }), []);
 
@@ -67,7 +42,7 @@ export default function OriginalScreen() {
 
   return (
     <Screen ref={scrollRef}>
-      <ChapterHeader onJumpToVerse={jumpTo} />
+      <ChapterHeader />
 
       <View style={styles.controls}>
         <ThemedText type="small" themeColor="textSecondary">
@@ -109,16 +84,13 @@ export default function OriginalScreen() {
       ) : !loaded ? (
         <ActivityIndicator style={styles.loading} />
       ) : (
-        <View style={styles.verses} onLayout={(e) => (listY.current = e.nativeEvent.layout.y)}>
+        <View style={styles.verses} onLayout={onListLayout}>
           {Array.from({ length: verseCount }, (_, i) => i + 1).map((verse) => (
             <ThemedView
               key={`${book}:${chapter}:${verse}`}
               type={highlight === verse ? 'backgroundSelected' : 'backgroundElement'}
               style={styles.verse}
-              onLayout={(e) => {
-                verseY.current.set(verse, e.nativeEvent.layout.y);
-                if (pendingJump.current === verse && scrollToVerse(verse)) pendingJump.current = null;
-              }}>
+              onLayout={(e) => onVerseLayout(verse, e)}>
               <ThemedText type="smallBold" themeColor="textSecondary">
                 {formatRef({ book, chapter, verse })}
               </ThemedText>
@@ -155,10 +127,7 @@ export default function OriginalScreen() {
         language={language}
         verseRef={picked ? { book, chapter, verse: picked.verse } : null}
         onClose={() => setPicked(null)}
-        onGoToVerse={(ref) => {
-          jumpTo(ref);
-          goTo(ref.book, ref.chapter);
-        }}
+        onGoToVerse={show}
       />
     </Screen>
   );

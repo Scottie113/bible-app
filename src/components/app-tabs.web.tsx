@@ -25,6 +25,9 @@ export default function AppTabs() {
           <TabTrigger name="compare" href="/compare" asChild>
             <TabButton>Original</TabButton>
           </TabTrigger>
+          <TabTrigger name="notes" href="/notes" asChild>
+            <TabButton>Notes</TabButton>
+          </TabTrigger>
         </CustomTabList>
       </TabList>
     </Tabs>
