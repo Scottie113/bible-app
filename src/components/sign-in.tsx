@@ -87,9 +87,13 @@ export function SignIn() {
 export function AccountsNotSetUp() {
   return (
     <ThemedView type="backgroundElement" style={styles.notice}>
-      <ThemedText type="smallBold">Accounts aren’t set up on this build</ThemedText>
+      <ThemedText type="smallBold">Sign-in isn’t available on this preview yet</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
-        Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_KEY to .env.local (see .env.example) and restart the app.
+        Accounts, notes, highlights and documents are coming soon. Meanwhile you can read and compare translations and
+        explore the Hebrew and Greek in the Read and Original tabs.
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        (For the developer: set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_KEY — see .env.example.)
       </ThemedText>
     </ThemedView>
   );

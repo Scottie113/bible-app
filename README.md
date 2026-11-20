@@ -62,6 +62,17 @@ The local backend only works on this computer. To sync between your real devices
    Email confirmation is on by default in the cloud (sign-up shows "check your email").
 4. Put the project's URL and publishable key in `.env.local` (or EAS environment variables for app builds).
 
+## Website (GitHub Pages)
+
+Every push to `main` builds the web version and publishes it at **https://scottie113.github.io/bible-app/**
+(`.github/workflows/deploy-web.yml`; progress in the repository's Actions tab). The build runs the
+typecheck and lint first.
+
+Until a cloud Supabase project exists, the published site has reading and the Hebrew/Greek view, and the
+Notes/Documents tabs say sign-in is coming soon. To turn accounts on for the website, add repository variables
+`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_KEY` (Settings > Secrets and variables > Actions >
+Variables) and re-run the workflow.
+
 ## How sync works
 
 - Tables: `notes`, `highlights`, `reading_state`, `documents` (see `supabase/migrations`; documents store
