@@ -6,7 +6,7 @@ import {
   TabTriggerSlotProps,
   TabListProps,
 } from 'expo-router/ui';
-import { Pressable, View, StyleSheet, type PressableProps } from 'react-native';
+import { Pressable, View, StyleSheet, useWindowDimensions, type PressableProps } from 'react-native';
 
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 
@@ -27,6 +27,9 @@ export default function AppTabs() {
           </TabTrigger>
           <TabTrigger name="notes" href="/notes" asChild>
             <TabButton>Notes</TabButton>
+          </TabTrigger>
+          <TabTrigger name="docs" href="/docs" asChild>
+            <TabButton>Documents</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>
@@ -50,12 +53,16 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
 }
 
 export function CustomTabList(props: TabListProps) {
+  // Phones: no room for the app name next to four tabs.
+  const narrow = useWindowDimensions().width < 560;
   return (
-    <View {...props} style={styles.tabListContainer}>
-      <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <ThemedText type="smallBold" style={styles.brandText}>
-          Bible Study
-        </ThemedText>
+    <View {...props} style={[styles.tabListContainer, narrow && styles.tabListNarrow]}>
+      <ThemedView type="backgroundElement" style={[styles.innerContainer, narrow && styles.innerNarrow]}>
+        {!narrow && (
+          <ThemedText type="smallBold" style={styles.brandText}>
+            Bible Study
+          </ThemedText>
+        )}
 
         {props.children}
       </ThemedView>
@@ -82,6 +89,8 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     maxWidth: MaxContentWidth,
   },
+  tabListNarrow: { padding: Spacing.two },
+  innerNarrow: { paddingHorizontal: Spacing.two, justifyContent: 'space-between', gap: Spacing.one },
   brandText: {
     marginRight: 'auto',
   },

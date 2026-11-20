@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Draws the Notes tab icon (a page with lines and a folded corner) as
+ * Draws the Notes tab icon (a page with lines and a folded corner) and the
+ * Documents tab icon (a page with a title bar and text lines) as
  * black-on-transparent PNGs at 24/48/72 px, matching the other tab icons.
- *   node scripts/make-notes-icon.mjs
+ *   node scripts/make-tab-icons.mjs
  */
 import { Buffer } from 'node:buffer';
 import { writeFileSync } from 'node:fs';
@@ -29,13 +30,24 @@ function chunk(type, data) {
   return Buffer.concat([len, body, crc]);
 }
 
-function draw(size) {
+/** Documents icon: plain page, bold title bar, four text lines. */
+function docShape(X, Y) {
+  const stroke = 1.8;
+  const outline =
+    X >= 4 && X <= 20 && Y >= 2 && Y <= 22 && !(X >= 4 + stroke && X <= 20 - stroke && Y >= 2 + stroke && Y <= 22 - stroke);
+  const titleBar = Y >= 6 && Y <= 8.6 && X >= 7 && X <= 17;
+  const lines = [11.5, 14.5, 17.5].some((ly) => Y >= ly - 0.7 && Y <= ly + 0.7 && X >= 7 && X <= (ly === 17.5 ? 13 : 17));
+  return outline || titleBar || lines;
+}
+
+function draw(size, shape) {
   const s = size / 24; // design on a 24px grid
   const alpha = new Float32Array(size * size);
   // Anti-aliased by 4x4 supersampling of simple shapes.
   const inside = (x, y) => {
     const X = x / s;
     const Y = y / s;
+    if (shape === 'docs') return docShape(X, Y);
     const stroke = 1.8;
     // page outline: rect 4..20 x 2..22 with folded corner at top-right (15..20, 2..7)
     const inPage = X >= 4 && X <= 20 && Y >= 2 && Y <= 22 && !(X > 15 && Y < 7 && X - 15 > Y - 2);
@@ -71,7 +83,9 @@ function draw(size) {
   ]);
 }
 
-for (const [name, size] of [['notes.png', 24], ['notes@2x.png', 48], ['notes@3x.png', 72]]) {
-  writeFileSync(join(out, name), draw(size));
+for (const shape of ['notes', 'docs']) {
+  for (const [suffix, size] of [['', 24], ['@2x', 48], ['@3x', 72]]) {
+    writeFileSync(join(out, `${shape}${suffix}.png`), draw(size, shape));
+  }
 }
-console.log('wrote notes.png, notes@2x.png, notes@3x.png');
+console.log('wrote notes*.png and docs*.png');

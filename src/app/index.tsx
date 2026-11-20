@@ -17,32 +17,39 @@ import { VerseActions } from '@/components/verse-actions';
 import { Fonts, HighlightColors, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useStoreState } from '@/sync/account';
-import type { Note } from '@/sync/types';
+
+/** A note or document that mentions a verse. */
+type Mention = { kind: 'note' | 'doc'; id: string; title: string; snippet: string };
 
 export default function ReadScreen() {
   const { book, chapter, translation, setTranslation } = useReadingLocation();
   const { verses, error } = useChapter(translation, book, chapter);
   const { scrollRef, focused, setFocused, onListLayout, onVerseLayout } = useVerseScroll();
-  const { highlights, notes } = useStoreState();
+  const { highlights, notes, documents } = useStoreState();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const [notesFor, setNotesFor] = useState<Note[] | null>(null);
+  const [notesFor, setNotesFor] = useState<Mention[] | null>(null);
   const router = useRouter();
 
   // Which notes mention each verse of this chapter (and the chapter as a whole).
   const chapterStart = toVerseId({ book, chapter, verse: 0 });
   const notesByVerse = useMemo(() => {
-    const map = new Map<number, Note[]>();
-    for (const note of Object.values(notes)) {
-      if (note.deleted_at) continue;
-      for (const id of note.verse_ids) {
+    const map = new Map<number, Mention[]>();
+    const add = (verseIds: number[], mention: Mention) => {
+      for (const id of verseIds) {
         if (id < chapterStart || id >= chapterStart + 1000) continue;
         const list = map.get(id) ?? [];
-        if (!list.includes(note)) list.push(note);
+        if (!list.some((m) => m.id === mention.id)) list.push(mention);
         map.set(id, list);
       }
+    };
+    for (const n of Object.values(notes)) {
+      if (!n.deleted_at) add(n.verse_ids, { kind: 'note', id: n.id, title: n.title, snippet: n.body });
+    }
+    for (const d of Object.values(documents)) {
+      if (!d.deleted_at) add(d.verse_ids, { kind: 'doc', id: d.id, title: d.title, snippet: d.plain_text });
     }
     return map;
-  }, [notes, chapterStart]);
+  }, [notes, documents, chapterStart]);
   const chapterNotes = notesByVerse.get(chapterStart);
 
   const selected = focused && verses?.[focused - 1];
@@ -108,9 +115,10 @@ export default function ReadScreen() {
       <NotesList
         notes={notesFor}
         onClose={() => setNotesFor(null)}
-        onOpen={(id) => {
+        onOpen={(m) => {
           setNotesFor(null);
-          router.push(`/notes/${id}`);
+          if (m.kind === 'note') router.push({ pathname: '/notes/[id]', params: { id: m.id } });
+          else router.push({ pathname: '/docs/[id]', params: { id: m.id } });
         }}
       />
     </Screen>
@@ -128,20 +136,29 @@ function NoteMarker({ count, onPress }: { count: number; onPress: () => void }) 
 }
 
 /** Small popup listing the notes that mention a verse. */
-function NotesList({ notes, onClose, onOpen }: { notes: Note[] | null; onClose: () => void; onOpen: (id: string) => void }) {
+function NotesList({
+  notes,
+  onClose,
+  onOpen,
+}: {
+  notes: Mention[] | null;
+  onClose: () => void;
+  onOpen: (mention: Mention) => void;
+}) {
   return (
-    <Modal visible={!!notes} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={!!notes} transparent animationType="none" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
       <ThemedView style={styles.popup}>
-        <ThemedText type="smallBold">Your notes on this</ThemedText>
+        <ThemedText type="smallBold">Your notes and documents on this</ThemedText>
         {notes?.map((n) => (
-          <Pressable key={n.id} onPress={() => onOpen(n.id)} accessibilityRole="link">
+          <Pressable key={n.id} onPress={() => onOpen(n)} accessibilityRole="link">
             <ThemedView type="backgroundElement" style={styles.popupRow}>
               <ThemedText type="smallBold" numberOfLines={1}>
-                {n.title || 'Untitled note'}
+                {n.kind === 'note' ? '📝 ' : '📄 '}
+                {n.title || (n.kind === 'note' ? 'Untitled note' : 'Untitled document')}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                {n.body.trim()}
+                {n.snippet.trim()}
               </ThemedText>
             </ThemedView>
           </Pressable>
@@ -163,6 +180,7 @@ const styles = StyleSheet.create({
   marker: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.two, borderRadius: Spacing.two },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.35)' },
   popup: {
+    zIndex: 1, // above the dimmed backdrop (which is absolutely positioned)
     marginTop: 'auto',
     marginBottom: 'auto',
     marginHorizontal: Spacing.three,

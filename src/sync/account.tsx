@@ -81,6 +81,7 @@ export function useAccount(): Account {
 
 const EMPTY_STATE: StoreState = {
   notes: {},
+  documents: {},
   highlights: {},
   reading: null,
   lastPulled: null,

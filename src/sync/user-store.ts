@@ -4,7 +4,10 @@ import { randomUUID } from 'expo-crypto';
 
 import { verseIdsIn } from '@/bible/find-refs';
 
-import type { Highlight, HighlightColor, Note, ReadingState, TableName } from './types';
+import type { DocumentRow, Highlight, HighlightColor, Note, ReadingState, RichContent, TableName } from './types';
+
+type AnyRow = Note | Highlight | ReadingState | DocumentRow;
+const TABLES = ['notes', 'highlights', 'reading_state', 'documents'] as const;
 
 /**
  * One signed-in person's notes, highlights and reading place, kept on the
@@ -17,6 +20,7 @@ import type { Highlight, HighlightColor, Note, ReadingState, TableName } from '.
  */
 export type StoreState = {
   notes: Record<string, Note>;
+  documents: Record<string, DocumentRow>;
   highlights: Record<number, Highlight>;
   reading: ReadingState | null;
   /** Server time of the newest row we have pulled. */
@@ -28,6 +32,7 @@ export type StoreState = {
 
 const EMPTY: StoreState = {
   notes: {},
+  documents: {},
   highlights: {},
   reading: null,
   lastPulled: null,
@@ -82,7 +87,7 @@ export class UserStore {
     const run = ++this.runs;
     try {
       const saved = await AsyncStorage.getItem(this.storageKey);
-      if (saved && this.state.status === 'loading') this.set({ ...JSON.parse(saved), status: 'syncing' }, false);
+      if (saved && this.state.status === 'loading') this.set({ ...EMPTY, ...JSON.parse(saved), status: 'syncing' }, false);
       else this.set({ status: 'syncing' }, false);
     } catch {
       this.set({ status: 'syncing' }, false);
@@ -173,6 +178,42 @@ export class UserStore {
     this.enqueue(`notes:${id}`);
   }
 
+  /** Create or update a rich-text document. Returns the saved document. */
+  saveDocument(input: {
+    id?: string;
+    title: string;
+    content: RichContent;
+    plainText: string;
+    verseIds: number[];
+    noteIds: string[];
+  }): DocumentRow {
+    const existing = input.id ? this.state.documents[input.id] : undefined;
+    const time = now();
+    const doc: DocumentRow = {
+      id: existing?.id ?? input.id ?? randomUUID(),
+      user_id: this.userId,
+      title: input.title,
+      content: input.content,
+      plain_text: input.plainText,
+      verse_ids: input.verseIds,
+      note_ids: input.noteIds,
+      created_at: existing?.created_at ?? time,
+      updated_at: time,
+      deleted_at: null,
+    };
+    this.set({ documents: { ...this.state.documents, [doc.id]: doc } });
+    this.enqueue(`documents:${doc.id}`);
+    return doc;
+  }
+
+  deleteDocument(id: string) {
+    const doc = this.state.documents[id];
+    if (!doc) return;
+    const time = now();
+    this.set({ documents: { ...this.state.documents, [id]: { ...doc, deleted_at: time, updated_at: time } } });
+    this.enqueue(`documents:${id}`);
+  }
+
   setHighlight(verseId: number, color: HighlightColor | null) {
     const time = now();
     const existing = this.state.highlights[verseId];
@@ -211,6 +252,10 @@ export class UserStore {
     };
     if (table === 'notes') {
       const row = this.state.notes[key];
+      return row ? { table, row: strip(row), conflict: 'id' } : null;
+    }
+    if (table === 'documents') {
+      const row = this.state.documents[key];
       return row ? { table, row: strip(row), conflict: 'id' } : null;
     }
     if (table === 'highlights') {
@@ -263,7 +308,7 @@ export class UserStore {
       : '1970-01-01T00:00:00Z';
     let newest = this.state.lastPulled;
     try {
-      for (const table of ['notes', 'highlights', 'reading_state'] as const) {
+      for (const table of TABLES) {
         const { data, error } = await this.db
           .from(table)
           .select('*')
@@ -287,8 +332,14 @@ export class UserStore {
    * alone (the local edit is newer and will be sent). `force` is used for the
    * server's answer to our own upsert, which is the final word.
    */
-  private merge(table: TableName, row: Note | Highlight | ReadingState, force = false) {
-    if (table === 'notes') {
+  private merge(table: TableName, row: AnyRow, force = false) {
+    if (table === 'documents') {
+      const doc = row as DocumentRow;
+      if (!force && this.state.outbox.includes(`documents:${doc.id}`)) return;
+      if (force || newer(this.state.documents[doc.id], doc)) {
+        this.set({ documents: { ...this.state.documents, [doc.id]: doc } });
+      }
+    } else if (table === 'notes') {
       const note = row as Note;
       if (!force && this.state.outbox.includes(`notes:${note.id}`)) return;
       if (force || newer(this.state.notes[note.id], note)) {
@@ -311,10 +362,10 @@ export class UserStore {
   private listen() {
     const filter = `user_id=eq.${this.userId}`;
     const channel = this.db.channel(`user-${this.userId}`);
-    for (const table of ['notes', 'highlights', 'reading_state'] as const) {
+    for (const table of TABLES) {
       channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, (payload) => {
         if (payload.new && 'updated_at' in payload.new) {
-          this.merge(table, payload.new as Note | Highlight | ReadingState);
+          this.merge(table, payload.new as AnyRow);
         }
       });
     }

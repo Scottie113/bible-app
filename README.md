@@ -22,6 +22,17 @@ A cross-platform Bible study app (web, iPhone/iPad, Android) built with Expo + R
   - **In the Read tab:** tap a verse to highlight it (5 colors) or **Add to note** (adds the reference
     and the verse text). Verses your notes mention show 📝 — tap it to open the note.
   - Your reading place (book, chapter, translations) follows you between devices.
+- **Documents tab (word processor):** sermons, study guides and longer writing.
+  - Fonts (incl. Chinese fonts), sizes, bold/italic/underline/strikethrough, text color, highlight colors,
+    headings, alignment, bulleted/numbered lists, quotes, divider lines, web links, undo/redo, word count.
+  - **+ Verse:** type a reference (`John 3:16-18`, `Ps 23`) to insert the verse text as a quote, in the
+    translation you're reading.
+  - **+ Note:** place one of your notes in the page as a card. It always shows the note's latest text, and
+    its verse references are clickable.
+  - References you type anywhere in the document are underlined; click one, then **Open** to go to it.
+  - Templates: blank, sermon outline, topic study guide. Verses a document mentions get a marker in the
+    Read tab, like notes.
+  - Same editor on web and in the phone/tablet apps (an Expo "DOM component", `'use dom'`, built on Tiptap).
   - Works offline: changes are saved on the device and sent when back online; the newest edit wins.
 
 ## Run it
@@ -53,7 +64,8 @@ The local backend only works on this computer. To sync between your real devices
 
 ## How sync works
 
-- Tables: `notes`, `highlights`, `reading_state` (see `supabase/migrations`). Row-level security: each
+- Tables: `notes`, `highlights`, `reading_state`, `documents` (see `supabase/migrations`; documents store
+  the editor's JSON plus a plain-text copy for search). Row-level security: each
   person can only read and write their own rows.
 - Each device keeps a full copy of the person's notes/highlights (`src/sync/user-store.ts`), saved locally,
   so everything opens instantly and works offline.
@@ -66,6 +78,7 @@ The local backend only works on this computer. To sync between your real devices
 
 ```
 src/app/            screens (Expo Router): index.tsx = Read, compare.tsx = Original, notes/ = Notes
+src/components/editor/  the document editor: rich-editor.tsx ('use dom'), verse-links.ts, note-card.tsx, templates.ts
 src/sync/           accounts + sync: supabase.ts (client), account.tsx (sign-in state), user-store.ts (offline store + sync)
 supabase/           backend config and database migrations
 src/bible/          the Bible "engine" — no UI
@@ -138,7 +151,9 @@ and the revised Chinese Union Version are copyrighted.
 3. ✅ Accounts and sync (Supabase): highlights, notes with verse links, reading place, offline
 4. AI study assistant with tradition lenses, able to explain why a word was translated a certain way
    (server-side; provider configurable — OpenAI or Claude)
-5. AI over your notes, polish, app store release
+5. AI over your notes and documents, polish, app store release
+
+Also done: documents (word processor) with notes and verses inside.
 
 ## Known limits / notes for later
 
@@ -149,3 +164,8 @@ and the revised Chinese Union Version are copyrighted.
   web it is downloaded a book at a time; in the phone apps it is all bundled. Before store release, move to
   downloadable SQLite packs (only `src/bible/source.ts` and `src/bible/original.ts` need to change).
 - KJV italic markers (`[was]`) and paragraph marks (`¶`) are stripped for now.
+- Documents: if the same document is edited on two devices at the same moment, the last save wins for the
+  whole document (no merging of simultaneous edits). Not yet: printing/export to Word or PDF, tables,
+  images, comments.
+- The document editor has only been tested in a browser so far; on phones it runs inside a web view and
+  needs a check on a real device (keyboard, toolbar scrolling).

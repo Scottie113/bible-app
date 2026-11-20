@@ -118,7 +118,7 @@ function ChooseNote({
     [notes],
   );
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Cancel" />
       <ThemedView style={styles.sheet}>
         <SafeAreaView edges={['bottom']}>

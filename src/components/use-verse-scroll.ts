@@ -39,10 +39,15 @@ export function useVerseScroll() {
   );
 
   // Declared before the chapter effect so a jump into a new chapter is known first.
+  // The jump stays "pending" for a moment: if the screen was hidden (another tab was
+  // showing) its verse positions are re-measured as it appears, and each new
+  // measurement re-scrolls to the right place.
   useEffect(() => {
     if (!focus) return;
     pending.current = focus.verse || null;
-    if (pending.current && scrollTo(pending.current)) pending.current = null;
+    if (pending.current) scrollTo(pending.current);
+    const settle = setTimeout(() => (pending.current = null), 1200);
+    return () => clearTimeout(settle);
     // Only re-run for a new request, not when scrollTo changes with the chapter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus]);
@@ -51,14 +56,18 @@ export function useVerseScroll() {
     if (pending.current == null) scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [chapterKey]);
 
-  const onListLayout = useCallback((e: LayoutChangeEvent) => {
-    listY.current = e.nativeEvent.layout.y;
-  }, []);
+  const onListLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      listY.current = e.nativeEvent.layout.y;
+      if (pending.current) scrollTo(pending.current);
+    },
+    [scrollTo],
+  );
 
   const onVerseLayout = useCallback(
     (verse: number, e: LayoutChangeEvent) => {
       positions.current.set(`${chapterKey}:${verse}`, e.nativeEvent.layout.y);
-      if (pending.current === verse && scrollTo(verse)) pending.current = null;
+      if (pending.current === verse) scrollTo(verse);
     },
     [chapterKey, scrollTo],
   );

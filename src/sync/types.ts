@@ -35,4 +35,28 @@ export type ReadingState = {
   synced_at?: string;
 };
 
-export type TableName = 'notes' | 'highlights' | 'reading_state';
+/** Rich-text document (sermon, study guide…). `content` is Tiptap/ProseMirror JSON. */
+export type DocumentRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  content: RichContent;
+  plain_text: string;
+  verse_ids: number[];
+  note_ids: string[];
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  synced_at?: string;
+};
+
+/** ProseMirror JSON node. */
+export type RichContent = {
+  type: string;
+  attrs?: Record<string, unknown>;
+  content?: RichContent[];
+  marks?: { type: string; attrs?: Record<string, unknown> }[];
+  text?: string;
+};
+
+export type TableName = 'notes' | 'highlights' | 'reading_state' | 'documents';
