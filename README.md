@@ -1,56 +1,72 @@
-# Welcome to your Expo app 👋
+# Bible Study
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A cross-platform Bible study app (web, iPhone/iPad, Android) built with Expo + React Native.
 
-## Get started
+**Step 1 (this commit):** Bible reader, book/chapter picker, "go to" box (`John 3:16`, `Ps 23`, `1 Cor 13:4-7`), and a parallel Compare view. Includes the KJV and WEB.
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run it
 
 ```bash
-npm run reset-project
+npm install
+npx expo start --web      # browser
+npx expo start            # scan the QR code with Expo Go on a phone
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Before committing: `npm run typecheck` and `npx eslint .`
 
-### Other setup steps
+## How it's organized
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```
+src/app/            screens (Expo Router): index.tsx = Read, compare.tsx = Compare
+src/bible/          the Bible "engine" — no UI
+  books.ts            66 books, names, abbreviations, chapter counts
+  verse-id.ts         verse numbers (BBCCCVVV) + reference parser
+  translations.ts     list of available translations
+  source.ts           the only code that reads Bible text (getChapter, useChapter)
+  reading-location.tsx current book/chapter/translation, shared by tabs
+src/components/     shared UI (chapter header, book picker, translation chips)
+src/data/bibles/    generated text: <translation>/<book>.json, loaded one book at a time
+scripts/import-vpl.mjs  converts eBible.org files into src/data/bibles
+```
 
-## Learn more
+### Verse numbers
 
-To learn more about developing your project with Expo, look at the following resources:
+Every verse has one id: `book * 1_000_000 + chapter * 1_000 + verse`, so John 3:16 is `43003016`.
+Highlights, note links, interlinear words, and AI citations will all use this id, which is how
+everything connects across translations and devices.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Adding a translation
 
-## Join the community
+1. Download the "verse per line" zip for a public-domain translation from
+   `https://ebible.org/Scriptures/<id>_vpl.zip` (e.g. `fraLSG`, `spaRV1909`, `cmn-cu89s`, `cmn-cu89t`)
+   and check its `_about.htm` for the license.
+2. `npm run import-bible -- <short-id> path/to/<id>_vpl.txt`
+3. Add an entry to `src/bible/translations.ts`.
 
-Join our community of developers creating universal apps.
+The script keeps the 66 Protestant-canon books and checks chapter counts.
+Some translations number verses differently (e.g. WEB puts the Romans doxology at 14:24-26 and leaves
+out a few verses); the app shows those differences rather than hiding them.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Bible text licenses
+
+| Translation | License | Source |
+|---|---|---|
+| King James Version (1769) | Public domain (Crown patent applies only in the UK) | eBible.org `eng-kjv2006` |
+| World English Bible | Public domain ("World English Bible" is a trademark; don't change the text and keep the name) | eBible.org `eng-web` |
+
+Only add texts that are public domain or openly licensed. NIV, ESV, NKJV, NASB, Reina-Valera 1960, and the revised Chinese Union Version are copyrighted.
+
+## Roadmap
+
+1. ✅ Reader + parallel view (KJV, WEB)
+2. Accounts and sync (Supabase + PowerSync): highlights, notes with verse links, reading place
+3. More translations (Chinese Union Simplified/Traditional, Louis Segond, Reina-Valera 1909) and Hebrew/Greek interlinear (STEPBible data)
+4. AI study assistant with tradition lenses (server-side; provider configurable — OpenAI or Claude)
+5. AI over your notes, polish, app store release
+
+## Notes for later
+
+- Bible text currently ships inside the app (about 4 MB per translation). On the web each book is a
+  separate download. Before adding many translations, move to downloadable SQLite files; only
+  `src/bible/source.ts` needs to change.
+- KJV italic markers (`[was]`) and paragraph marks (`¶`) are stripped for now.

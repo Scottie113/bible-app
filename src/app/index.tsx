@@ -1,98 +1,101 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View, type ScrollViewInstance } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
+import { getBook } from '@/bible/books';
+import { useReadingLocation } from '@/bible/reading-location';
+import { useChapter } from '@/bible/source';
+import { getTranslation } from '@/bible/translations';
+import { formatRef, type VerseRef } from '@/bible/verse-id';
+import { ChapterHeader } from '@/components/chapter-header';
+import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { TranslationChips } from '@/components/translation-chips';
+import { Fonts, Spacing } from '@/constants/theme';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
+export default function ReadScreen() {
+  const { book, chapter, translation, setTranslation } = useReadingLocation();
+  const { verses, error } = useChapter(translation, book, chapter);
+  const [selected, setSelected] = useState<number | null>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const listY = useRef(0);
+  const verseY = useRef(new Map<number, number>());
+  const pendingJump = useRef<number | null>(null);
+
+  // New chapter: clear the selection and go back to the top (unless jumping to a verse).
+  useEffect(() => {
+    verseY.current.clear();
+    if (pendingJump.current == null) {
+      setSelected(null);
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, [book, chapter]);
+
+  const scrollToVerse = (verse: number) => {
+    const y = verseY.current.get(verse);
+    if (y == null) return false;
+    scrollRef.current?.scrollTo({ y: Math.max(listY.current + y - Spacing.five, 0), animated: true });
+    return true;
+  };
+
+  const jumpTo = (ref: VerseRef) => {
+    setSelected(ref.verse);
+    pendingJump.current = ref.verse;
+    // Same chapter: positions are already known. New chapter: onLayout below finishes the jump.
+    const sameChapter = ref.book === book && ref.chapter === chapter;
+    if (sameChapter && verses && scrollToVerse(ref.verse)) pendingJump.current = null;
+  };
+
+  return (
+    <Screen ref={scrollRef}>
+      <ChapterHeader onJumpToVerse={jumpTo} />
+      <TranslationChips selected={[translation]} onPress={setTranslation} />
+
+      <ThemedText type="subtitle" style={styles.heading}>
+        {getBook(book).name} {chapter}
       </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+      {error ? (
+        <ThemedText themeColor="textSecondary">Couldn’t load this chapter: {error.message}</ThemedText>
+      ) : !verses ? (
+        <ActivityIndicator style={styles.loading} />
+      ) : (
+        <View onLayout={(e) => (listY.current = e.nativeEvent.layout.y)}>
+          {verses.map((v) => (
+            <Pressable
+              key={v.id}
+              onPress={() => setSelected(selected === v.verse ? null : v.verse)}
+              accessibilityLabel={formatRef({ book, chapter, verse: v.verse })}
+              onLayout={(e) => {
+                verseY.current.set(v.verse, e.nativeEvent.layout.y);
+                if (pendingJump.current === v.verse && scrollToVerse(v.verse)) pendingJump.current = null;
+              }}>
+              <ThemedView type={selected === v.verse ? 'backgroundSelected' : 'background'} style={styles.verse}>
+                <ThemedText style={styles.verseText}>
+                  <ThemedText type="smallBold" themeColor="textSecondary" style={styles.number}>
+                    {v.verse}{' '}
+                  </ThemedText>
+                  {v.text || <ThemedText themeColor="textSecondary">(not in this translation’s text)</ThemedText>}
+                </ThemedText>
+              </ThemedView>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
-        <ThemedText type="code" style={styles.code}>
-          get started
+      {selected != null && (
+        <ThemedText type="small" themeColor="textSecondary">
+          Selected: {formatRef({ book, chapter, verse: selected })} ({getTranslation(translation).abbreviation})
         </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      )}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  heading: { fontFamily: Fonts.serif },
+  loading: { marginTop: Spacing.five },
+  verse: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.two, borderRadius: Spacing.one },
+  verseText: { fontFamily: Fonts.serif, fontSize: 18, lineHeight: 30, fontWeight: 400 },
+  number: { fontSize: 12 },
 });

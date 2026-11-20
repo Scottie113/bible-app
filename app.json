@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "bible-app-tmp",
-    "slug": "bible-app-tmp",
+    "name": "Bible Study",
+    "slug": "bible-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "bibleapptmp",
+    "scheme": "bibleapp",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -20,7 +20,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "server",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
