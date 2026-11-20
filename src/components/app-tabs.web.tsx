@@ -23,7 +23,7 @@ export default function AppTabs() {
             <TabButton>Read</TabButton>
           </TabTrigger>
           <TabTrigger name="compare" href="/compare" asChild>
-            <TabButton>Compare</TabButton>
+            <TabButton>Original</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>

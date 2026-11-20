@@ -25,7 +25,8 @@ const Context = createContext<ReadingLocation | null>(null);
 export function ReadingLocationProvider({ children }: { children: ReactNode }) {
   const [place, setPlace] = useState({ book: 43, chapter: 1 }); // John 1
   const [translation, setTranslation] = useState(DEFAULT_TRANSLATION);
-  const [compare, setCompare] = useState(() => TRANSLATIONS.map((t) => t.id));
+  // Translations shown under the Hebrew/Greek on the Original tab.
+  const [compare, setCompare] = useState<string[]>([DEFAULT_TRANSLATION]);
 
   const value = useMemo<ReadingLocation>(() => {
     const goTo = (book: number, chapter: number) =>
@@ -47,7 +48,8 @@ export function ReadingLocationProvider({ children }: { children: ReactNode }) {
       setTranslation,
       toggleCompare: (id) =>
         setCompare((current) => {
-          if (current.includes(id)) return current.length > 1 ? current.filter((x) => x !== id) : current;
+          // Turning every translation off is allowed: then only the Hebrew/Greek shows.
+          if (current.includes(id)) return current.filter((x) => x !== id);
           // keep the same order as TRANSLATIONS
           return TRANSLATIONS.map((t) => t.id).filter((x) => x === id || current.includes(x));
         }),
