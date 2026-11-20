@@ -68,10 +68,16 @@ Every push to `main` builds the web version and publishes it at **https://scotti
 (`.github/workflows/deploy-web.yml`; progress in the repository's Actions tab). The build runs the
 typecheck and lint first.
 
-Until a cloud Supabase project exists, the published site has reading and the Hebrew/Greek view, and the
-Notes/Documents tabs say sign-in is coming soon. To turn accounts on for the website, add repository variables
-`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_KEY` (Settings > Secrets and variables > Actions >
-Variables) and re-run the workflow.
+The website uses the cloud Supabase project `bible-app` (ref `ahariquipyazhlrbaebr`, US East). The build gets its
+address and publishable key from repository variables `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_KEY`
+(Settings > Secrets and variables > Actions > Variables).
+
+Cloud backend changes:
+- Database: add a file to `supabase/migrations`, then `npx supabase db push --remote` (try `--dry-run` first).
+- Sign-in settings: edit the `[remotes.production]` section of `supabase/config.toml`, then
+  `npx supabase config diff` and `npx supabase config push`.
+- Email confirmation is **off** for the preview (Supabase's built-in email only reaches your own team). To turn it
+  on, connect an email service (Authentication > Emails > SMTP settings) and set `enable_confirmations = true`.
 
 ## How sync works
 
