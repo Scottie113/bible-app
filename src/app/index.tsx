@@ -5,13 +5,14 @@ import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-nat
 import { getBook } from '@/bible/books';
 import { useReadingLocation } from '@/bible/reading-location';
 import { useChapter } from '@/bible/source';
-import { getTranslation } from '@/bible/translations';
+import { getTranslation, TRANSLATIONS } from '@/bible/translations';
 import { toVerseId } from '@/bible/verse-id';
 import { ChapterHeader } from '@/components/chapter-header';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { TranslationChips } from '@/components/translation-chips';
+import { PickerButton, SelectedChip } from '@/components/picker-button';
+import { PickerSheet } from '@/components/picker-sheet';
 import { useVerseScroll } from '@/components/use-verse-scroll';
 import { VerseActions } from '@/components/verse-actions';
 import { Fonts, HighlightColors, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -28,6 +29,7 @@ export default function ReadScreen() {
   const { highlights, notes, documents } = useStoreState();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [notesFor, setNotesFor] = useState<Mention[] | null>(null);
+  const [pickingVersion, setPickingVersion] = useState(false);
   const router = useRouter();
 
   // Which notes mention each verse of this chapter (and the chapter as a whole).
@@ -57,7 +59,19 @@ export default function ReadScreen() {
   return (
     <Screen ref={scrollRef}>
       <ChapterHeader />
-      <TranslationChips selected={[translation]} onPress={setTranslation} />
+      <View style={styles.versionRow}>
+        <PickerButton label="Version" onPress={() => setPickingVersion(true)} />
+        <SelectedChip label={getTranslation(translation).abbreviation} />
+      </View>
+      <PickerSheet
+        visible={pickingVersion}
+        title="Version to read"
+        mode="one"
+        options={TRANSLATIONS.map((t) => ({ id: t.id, label: t.name, detail: `Shown as “${t.abbreviation}”` }))}
+        selected={[translation]}
+        onChange={([id]) => setTranslation(id)}
+        onClose={() => setPickingVersion(false)}
+      />
 
       <View style={styles.headingRow}>
         <ThemedText type="subtitle" style={styles.heading}>
@@ -169,6 +183,7 @@ function NotesList({
 }
 
 const styles = StyleSheet.create({
+  versionRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   headingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   heading: { fontFamily: Fonts.serif },
   loading: { marginTop: Spacing.five },

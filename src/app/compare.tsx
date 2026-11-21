@@ -17,13 +17,14 @@ import { getTranslation, TRANSLATIONS } from '@/bible/translations';
 import { formatRef } from '@/bible/verse-id';
 import { ChapterHeader } from '@/components/chapter-header';
 import { InterlinearVerse, type InterlinearOptions } from '@/components/interlinear-verse';
+import { PickerButton, SelectedChip } from '@/components/picker-button';
 import { PickerSheet } from '@/components/picker-sheet';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useVerseScroll } from '@/components/use-verse-scroll';
 import { WordSheet } from '@/components/word-sheet';
-import { Accent, Fonts, Spacing } from '@/constants/theme';
+import { Fonts, Spacing } from '@/constants/theme';
 
 /**
  * Original-language view: each verse in the Hebrew (Old Testament) or Greek
@@ -63,7 +64,7 @@ export default function OriginalScreen() {
         <View style={styles.row}>
           <PickerButton label="Versions" onPress={() => setPicker('versions')} />
           {compare.length ? (
-            compare.map((id) => <Chip key={id} label={getTranslation(id).abbreviation} />)
+            compare.map((id) => <SelectedChip key={id} label={getTranslation(id).abbreviation} />)
           ) : (
             <ThemedText type="small" themeColor="textSecondary">
               None — only the {LANGUAGE_LABEL[language]}
@@ -72,7 +73,7 @@ export default function OriginalScreen() {
         </View>
         <View style={styles.row}>
           <PickerButton label="Meaning" onPress={() => setPicker('meaning')} />
-          <Chip label={meaningLabel} />
+          <SelectedChip label={meaningLabel} />
           <Toggle
             label="Pronunciation"
             on={options.showTranslit}
@@ -171,28 +172,6 @@ export default function OriginalScreen() {
   );
 }
 
-/** Opens a picker window: "Versions ▾". */
-function PickerButton({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
-      <View style={styles.pickerButton}>
-        <ThemedText type="smallBold" style={styles.pickerButtonText}>
-          {label} ▾
-        </ThemedText>
-      </View>
-    </Pressable>
-  );
-}
-
-/** Shows something that is selected (not a button). */
-function Chip({ label }: { label: string }) {
-  return (
-    <ThemedView type="backgroundSelected" style={styles.toggle}>
-      <ThemedText type="smallBold">{label}</ThemedText>
-    </ThemedView>
-  );
-}
-
 function Toggle({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
   return (
     <Pressable
@@ -213,14 +192,6 @@ function Toggle({ label, on, onPress }: { label: string; on: boolean; onPress: (
 const styles = StyleSheet.create({
   controls: { gap: Spacing.two },
   row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
-  pickerButton: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
-    borderWidth: 1,
-    borderColor: Accent,
-  },
-  pickerButtonText: { color: Accent },
   toggle: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.three, borderRadius: Spacing.three },
   heading: { fontFamily: Fonts.serif },
   loading: { marginTop: Spacing.five },

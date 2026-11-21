@@ -4,7 +4,7 @@ A cross-platform Bible study app (web, iPhone/iPad, Android) built with Expo + R
 
 **What works now**
 
-- **Read tab:** book/chapter picker, "go to" box (`John 3:16`, `Ps 23`, `1 Cor 13:4-7`), six translations:
+- **Read tab:** book/chapter picker, "go to" box (`John 3:16`, `Ps 23`, `1 Cor 13:4-7`), **Version ▾** picker with six translations:
   KJV, WEB, 和合本 (Simplified and Traditional), Louis Segond 1910, Reina-Valera 1909.
 - **Original tab:** each verse in the language it was written in — Hebrew for the Old Testament,
   Greek for the New — word by word with pronunciation and a meaning under each word, and any of the
