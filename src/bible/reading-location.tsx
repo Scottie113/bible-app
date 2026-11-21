@@ -25,6 +25,8 @@ type ReadingLocation = {
   previous: () => void;
   setTranslation: (id: string) => void;
   toggleCompare: (id: string) => void;
+  /** Replace the list of translations shown under the Hebrew/Greek. */
+  setCompareList: (ids: string[]) => void;
 };
 
 const Context = createContext<ReadingLocation | null>(null);
@@ -91,6 +93,10 @@ export function ReadingLocationProvider({ children }: { children: ReactNode }) {
       setTranslation: (id) => {
         touched.current = true;
         setTranslationState(id);
+      },
+      setCompareList: (ids) => {
+        touched.current = true;
+        setCompare(TRANSLATIONS.map((t) => t.id).filter((x) => ids.includes(x)));
       },
       toggleCompare: (id) => {
         touched.current = true;

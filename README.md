@@ -7,8 +7,14 @@ A cross-platform Bible study app (web, iPhone/iPad, Android) built with Expo + R
 - **Read tab:** book/chapter picker, "go to" box (`John 3:16`, `Ps 23`, `1 Cor 13:4-7`), six translations:
   KJV, WEB, 和合本 (Simplified and Traditional), Louis Segond 1910, Reina-Valera 1909.
 - **Original tab:** each verse in the language it was written in — Hebrew for the Old Testament,
-  Greek for the New — word by word with pronunciation and meaning, and any of the modern
-  translations underneath. Tap a word to see:
+  Greek for the New — word by word with pronunciation and a meaning under each word, and any of the
+  modern translations underneath.
+  - **Versions ▾** opens a window to tick any number of translations; only the chosen ones show.
+  - **Meaning ▾** picks one meaning language at a time: English, Español, 中文 (简体/繁體), Français or none.
+    Except English, the meaning is the word(s) that Bible actually used for each Hebrew/Greek word
+    (from Strong's-number tags), and "·" means it has no word for it (e.g. Greek "the" in Chinese).
+
+  Tap a word to see:
   - what it means in this verse and its grammar in plain English
   - the dictionary entry
   - how it is usually translated, with counts (e.g. אֱלֹהִים: "God" ×1777, "gods" ×145)
@@ -113,6 +119,8 @@ src/data/original/  generated: Hebrew/Greek words per book
 src/data/lexicon/   generated: dictionary entries + usage counts, in chunks
 scripts/import-vpl.mjs   eBible.org translation -> src/data/bibles
 scripts/import-step.mjs  STEPBible Hebrew/Greek + lexicons -> src/data/original, src/data/lexicon
+scripts/import-meanings.mjs  Chinese/French/Spanish word meanings from Strong's-tagged Bibles -> src/data/meanings
+scripts/sword-reader.mjs     reads CrossWire SWORD (zText) Bible modules
 ```
 
 All data files load one book (or lexicon chunk) at a time, only when needed.
@@ -154,6 +162,9 @@ node scripts/import-step.mjs path/to/folder
 | Louis Segond 1910 | Public domain | eBible.org `fraLSG` |
 | Reina-Valera 1909 | Public domain | eBible.org `spaRV1909` |
 | Hebrew OT (Leningrad Codex), Greek NT (Nestle-Aland + variants), word meanings, lexicons | **CC BY 4.0 — credit required** | STEPBible.org (Tyndale House, Cambridge) |
+| Word meanings in Chinese: 和合本 with Strong's numbers (Simplified, Traditional) | Public domain | CrossWire SWORD modules ChiUns, ChiUn |
+| Word meanings in French: Bible J.N. Darby with Strong's numbers | Public domain | CrossWire SWORD module FreJND |
+| Word meanings in Spanish (Old Testament): Reina-Valera 1909 with Strong's numbers | Public domain | eBible.org spaRV1909 (USFM) |
 
 STEPBible data is CC BY: the app must show "STEPBible.org" credit (it does, in the word panel) and
 keep it in any about/credits screen.
@@ -174,9 +185,9 @@ Also done: documents (word processor) with notes and verses inside.
 
 ## Known limits / notes for later
 
-- Word meanings under the Hebrew/Greek are in **English** (and Spanish for the Greek NT). There is no
-  free word-by-word Chinese or French data; options are AI-generated meanings reviewed by a person, or
-  showing the Chinese/French verse alongside (as now).
+- Chinese/French/Spanish word meanings come from how those translations are tagged, so a few words are
+  missing or approximate (coverage: Chinese 85% OT / 66% NT — Chinese has no word for Greek articles;
+  French 87% / 82%; Spanish 82% / 100%). Rebuild: `node scripts/import-meanings.mjs <sword dir> <usfm dir>`.
 - App size: text data is about 25 MB for six translations plus 40 MB for Hebrew/Greek and lexicons. On the
   web it is downloaded a book at a time; in the phone apps it is all bundled. Before store release, move to
   downloadable SQLite packs (only `src/bible/source.ts` and `src/bible/original.ts` need to change).

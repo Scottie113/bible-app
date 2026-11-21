@@ -1,7 +1,53 @@
 import { useEffect, useState } from 'react';
 
 import lexiconLoaders from '@/data/lexicon';
+import meaningLoaders, { type MeaningBook } from '@/data/meanings';
 import originalLoaders from '@/data/original';
+
+/**
+ * Language for the meaning shown under each Hebrew/Greek word (one at a time).
+ * English is STEPBible's word-by-word gloss. The others are the word(s) a
+ * public-domain translation used for that word in that verse, found through
+ * the translation's Strong's-number tags (scripts/import-meanings.mjs).
+ */
+export type MeaningLanguage = 'en' | 'es' | 'zh-Hans' | 'zh-Hant' | 'fr' | 'none';
+
+export const MEANING_LANGUAGES: { id: MeaningLanguage; label: string; detail: string }[] = [
+  { id: 'en', label: 'English', detail: 'Word-by-word meaning (STEPBible)' },
+  { id: 'es', label: 'Español', detail: 'New Testament: STEPBible · Old Testament: Reina-Valera 1909' },
+  { id: 'zh-Hans', label: '中文 (简体)', detail: '和合本 — how the Chinese Union Version translated each word' },
+  { id: 'zh-Hant', label: '中文 (繁體)', detail: '和合本 — 和合本如何翻譯每個字' },
+  { id: 'fr', label: 'Français', detail: 'Bible J.N. Darby — comment chaque mot a été traduit' },
+  { id: 'none', label: 'No meaning', detail: 'Only the Hebrew/Greek (and pronunciation)' },
+];
+
+const meaningCache = new Map<string, Promise<MeaningBook>>();
+
+/** Meanings for one chapter in one language: result[v-1][wordIndex]. English uses the words' own gloss. */
+export function useMeanings(language: MeaningLanguage, book: number, chapter: number) {
+  const key = `${language}:${book}:${chapter}`;
+  const [state, setState] = useState<{ key: string; meanings?: string[][] }>({ key: '' });
+  useEffect(() => {
+    const loader = meaningLoaders[language]?.[book];
+    if (!loader) return;
+    let cancelled = false;
+    const cacheKey = `${language}:${book}`;
+    let promise = meaningCache.get(cacheKey);
+    if (!promise) {
+      promise = loader();
+      promise.catch(() => meaningCache.delete(cacheKey));
+      meaningCache.set(cacheKey, promise);
+    }
+    promise.then(
+      (data) => !cancelled && setState({ key, meanings: data[chapter - 1] ?? [] }),
+      () => !cancelled && setState({ key, meanings: [] }),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [language, book, chapter, key]);
+  return state.key === key ? state.meanings : undefined;
+}
 
 /**
  * The Bible in the languages it was written in: Hebrew (Old Testament, from the

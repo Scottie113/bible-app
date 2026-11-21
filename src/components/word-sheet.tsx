@@ -21,6 +21,8 @@ type Props = {
   word: Word | null;
   language: OriginalLanguage;
   verseRef: VerseRef | null;
+  /** The word's meaning in the language chosen on the Original tab (besides English). */
+  meaning?: { label: string; text: string } | null;
   onClose: () => void;
   onGoToVerse: (ref: VerseRef) => void;
 };
@@ -30,7 +32,7 @@ type Props = {
  * the dictionary entry, how translators usually render it, and where else it
  * appears — so a reader can see *why* it was translated the way it was.
  */
-export function WordSheet({ word, language, verseRef, onClose, onGoToVerse }: Props) {
+export function WordSheet({ word, language, verseRef, meaning, onClose, onGoToVerse }: Props) {
   const { entry, loaded } = useLexiconEntry(word?.strong);
   const [fullDefinition, setFullDefinition] = useState(false);
   const [allRefs, setAllRefs] = useState(false);
@@ -70,7 +72,7 @@ export function WordSheet({ word, language, verseRef, onClose, onGoToVerse }: Pr
                 <ThemedText style={[styles.form, { fontFamily: ORIGINAL_FONT }]}>{displayOriginal(word.text)}</ThemedText>
                 <ThemedText style={styles.ltr}>
                   {displayTranslit(word.translit)} — “{displayGloss(word.gloss)}”
-                  {word.spanish ? ` · español: “${word.spanish}”` : ''}
+                  {meaning ? ` · ${meaning.label}: ${meaning.text ? `“${meaning.text}”` : '(no word for it)'}` : ''}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   {describeMorphology(word.morph, language)}

@@ -1,7 +1,14 @@
 import { memo } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { displayGloss, displayOriginal, displayTranslit, type OriginalLanguage, type Word } from '@/bible/original';
+import {
+  displayGloss,
+  displayOriginal,
+  displayTranslit,
+  type MeaningLanguage,
+  type OriginalLanguage,
+  type Word,
+} from '@/bible/original';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -13,14 +20,16 @@ export const ORIGINAL_FONT = Platform.select({
 
 export type InterlinearOptions = {
   showTranslit: boolean;
-  /** Which meaning to show under each word. */
-  meaning: 'english' | 'spanish' | 'none';
+  /** Which language's meaning to show under each word (one at a time). */
+  meaning: MeaningLanguage;
 };
 
 type Props = {
   words: Word[];
   language: OriginalLanguage;
   options: InterlinearOptions;
+  /** Meanings for this verse in the chosen language (not needed for English, which uses each word's gloss). */
+  meanings?: string[];
   selectedIndex?: number;
   onPressWord: (word: Word) => void;
 };
@@ -33,6 +42,7 @@ export const InterlinearVerse = memo(function InterlinearVerse({
   words,
   language,
   options,
+  meanings,
   selectedIndex,
   onPressWord,
 }: Props) {
@@ -47,11 +57,7 @@ export const InterlinearVerse = memo(function InterlinearVerse({
     <View style={[styles.words, language === 'hebrew' && styles.rtl]}>
       {words.map((w) => {
         const meaning =
-          options.meaning === 'english'
-            ? displayGloss(w.gloss)
-            : options.meaning === 'spanish'
-              ? (w.spanish ?? displayGloss(w.gloss))
-              : '';
+          options.meaning === 'none' ? null : options.meaning === 'en' ? displayGloss(w.gloss) : (meanings?.[w.index] ?? '');
         return (
           <Pressable
             key={w.index}
@@ -72,9 +78,10 @@ export const InterlinearVerse = memo(function InterlinearVerse({
                   {displayTranslit(w.translit)}
                 </ThemedText>
               )}
-              {!!meaning && (
-                <ThemedText type="small" style={styles.meaning}>
-                  {meaning}
+              {meaning !== null && (
+                // A dot where this translation has no word for it (e.g. Greek "the" in Chinese).
+                <ThemedText type="small" themeColor={meaning ? 'text' : 'textSecondary'} style={styles.meaning}>
+                  {meaning || '·'}
                 </ThemedText>
               )}
             </ThemedView>
